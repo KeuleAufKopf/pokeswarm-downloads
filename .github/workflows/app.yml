@@ -1,0 +1,63 @@
+# Baut die Electron-Desktop-App (app/) für Windows und Linux und legt die Ergebnisse als Workflow-Artefakte ab.
+# Es wird nichts veröffentlicht (kein Release, kein Auto-Update an Spieler).
+name: Desktop-App
+
+on:
+  push:
+    branches: [electron]
+    paths: ['app/**', '.github/workflows/app.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            ziel: --win
+            artefakt: PokeSwarm-windows
+            dateien: |
+              app/dist/*.exe
+              app/dist/*.blockmap
+              app/dist/latest.yml
+          - os: ubuntu-latest
+            ziel: --linux
+            artefakt: PokeSwarm-linux
+            dateien: |
+              app/dist/*.AppImage
+              app/dist/latest-linux.yml
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - run: npm ci
+
+      # Ohne Zertifikat baut electron-builder unsigniert; --publish never verhindert jedes Hochladen
+      - run: npm run dist -- ${{ matrix.ziel }}
+
+      # Platz für späteres Signieren (SignPath Foundation), nur Windows:
+      # 1. unsignierte .exe mit actions/upload-artifact hochladen (Schritt-ID merken),
+      # 2. signpath/github-action-submit-signing-request mit dieser Artefakt-ID aufrufen,
+      # 3. signierte Dateien statt der unsignierten als Artefakt ablegen.
+      # Hinweis: Für den NSIS-Installer muss auch die App-exe darin signiert sein, d. h. später
+      # erst win-unpacked signieren und dann mit "electron-builder --prepackaged" den Installer bauen.
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artefakt }}
+          path: ${{ matrix.dateien }}
+          if-no-files-found: error
+          retention-days: 30

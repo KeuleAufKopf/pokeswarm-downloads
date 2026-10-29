@@ -1,0 +1,90 @@
+{
+  "name": "pokeswarm",
+  "productName": "PokeSwarm",
+  "version": "2.0.0",
+  "description": "PokéSwarm Desktop-App",
+  "desktopName": "pokeswarm.desktop",
+  "author": "Buke Studios",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --publish never"
+  },
+  "dependencies": {
+    "electron-updater": "6.8.11"
+  },
+  "devDependencies": {
+    "electron": "45.1.0",
+    "electron-builder": "26.18.0"
+  },
+  "build": {
+    "appId": "com.bukestudios.pokeswarm",
+    "productName": "PokeSwarm",
+    "copyright": "Buke Studios",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**",
+      "build/icon.png",
+      "package.json"
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "KeuleAufKopf",
+        "repo": "pokeswarm-downloads"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "artifactName": "PokeSwarm-Setup-${version}.${ext}",
+      "shortcutName": "PokeSwarm",
+      "deleteAppDataOnUninstall": false
+    },
+    "portable": {
+      "artifactName": "PokeSwarm-Portable-${version}.${ext}"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "Game",
+      "executableName": "pokeswarm",
+      "artifactName": "PokeSwarm-${version}-${arch}.${ext}",
+      "syncDesktopName": true,
+      "desktop": {
+        "entry": {
+          "Name": "PokéSwarm"
+        }
+      }
+    }
+  }
+}
