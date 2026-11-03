@@ -25,9 +25,8 @@ von WebView2/Edge. Diese App zeichnet WebGL über **ANGLE auf Vulkan** und weich
 |---|---|
 | F11 | Vollbild an/aus |
 | Strg+R | Seite neu laden |
-| Strg+Umschalt+G | Grafikweg wechseln (Vulkan ↔ D3D11, unter Linux Vulkan ↔ OpenGL), merken und neu starten |
 | F12 | Entwicklertools (nur mit `--diag`) |
-| `--angle=vulkan\|d3d11\|gl` | Grafikweg nur für diesen Start erzwingen (ohne automatisches Ausweichen) |
+| `--angle=vulkan\|gl\|d3d11\|d3d11on12` | Grafikweg nur für diesen Start erzwingen (ohne automatisches Ausweichen) |
 | `--url=https://…` | andere Adresse laden (z. B. Testserver) |
 | `--diag` | Entwicklertools erlauben, Protokoll zusätzlich auf die Konsole |
 
@@ -35,16 +34,27 @@ Beispiel (Verknüpfung unter Windows): `PokeSwarm.exe --angle=d3d11`
 
 ## Grafikweg und gpu.json
 
+Seit 2.1.0 wählt man den Grafikweg im Spiel unter **Einstellungen → Grafikweg** (das Spiel schickt `{gpu: "…"}`,
+die App merkt ihn und startet neu). Strg+Umschalt+G gibt es nicht mehr.
+
+| Weg | |
+|---|---|
+| `vulkan` | Standard (umgeht den DirectComposition/D3D-Weg, der auf Nvidia-Karten ruckelt) |
+| `gl` | OpenGL, Reserve |
+| `d3d11` | DirectX 11 (nur Windows) |
+| `d3d11on12` | DirectX 11 über DirectX 12 (nur Windows) |
+
 Der gewählte Grafikweg steht in `gpu.json` im Datenordner der App:
 
 - Windows: `%APPDATA%\PokeSwarm\gpu.json`
 - Linux: `~/.config/PokeSwarm/gpu.json`
 
-Inhalt: `{ "angle": "vulkan" }` (oder `"d3d11"`, `"gl"`). Ohne Datei gilt Vulkan.
+Inhalt: `{ "v": 2, "angle": "vulkan" }`. Ohne Datei (oder mit einer alten aus 2.0.0) gilt Vulkan.
 
-Automatisches Ausweichen (einmal, dann bleibt es gespeichert): Stürzt der GPU-Prozess ab oder läuft WebGL
-5 Sekunden nach dem Laden nicht auf der Grafikkarte (WebGL aus oder nur SwiftShader-Software), stellt die App
-auf D3D11/OpenGL um und startet neu. Zurück geht es mit Strg+Umschalt+G oder durch Löschen von `gpu.json`.
+Automatisches Ausweichen: Stürzt der GPU-Prozess ab oder läuft WebGL 5 Sekunden nach dem Laden nicht auf der
+Grafikkarte (WebGL aus oder nur SwiftShader-Software), stellt die App auf OpenGL um (von OpenGL aus unter Windows
+auf D3D11) und startet neu. Nach dem ersten Ausweichen versucht der nächste normale Start wieder Vulkan; erst beim
+zweiten Mal bleibt die Reserve (`"auto"` in `gpu.json` zählt mit). Eine Auswahl in den Einstellungen setzt das zurück.
 
 Im selben Ordner liegt `launcher.log` (vorheriger Start: `launcher.old.log`) mit Grafikweg, erkanntem
 Renderer (z. B. `ANGLE (NVIDIA, Vulkan …)`) und Fehlern – das bitte bei Grafikproblemen mitschicken.

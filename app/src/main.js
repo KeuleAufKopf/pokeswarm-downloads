@@ -84,7 +84,6 @@ if (!app.requestSingleInstanceLock()) {
       const strg = i.control || i.meta;
       if (i.code === 'F11' && !i.isAutoRepeat) win.setFullScreen(!win.isFullScreen());
       else if (strg && !i.shift && i.code === 'KeyR') wc.reload();
-      else if (strg && i.shift && i.code === 'KeyG' && !i.isAutoRepeat) gpu.umschalten();
       else if (i.code === 'F12' && DIAG) wc.toggleDevTools();
       else return;
       e.preventDefault();
@@ -126,6 +125,8 @@ if (!app.requestSingleInstanceLock()) {
     // (kein Grafik-Ausweichgrund: das Spiel schickt auf Nvidia-Karten beim Start immer 3 Kicks)
     if (msg.kick) log('Kick vom Spiel');
     if (msg.rp && typeof msg.rp === 'object') discord.setzen(msg.rp);
+    // Grafikweg aus den Spiel-Einstellungen (2.1.0): merken und die App neu starten
+    if (typeof msg.gpu === 'string' && msg.gpu !== gpu.angle) gpu.setzen(msg.gpu);
   });
 
   // Auto-Update über GitHub-Releases dieses Repos; ohne Releases scheitert es still
