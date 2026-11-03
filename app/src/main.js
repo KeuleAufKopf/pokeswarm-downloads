@@ -45,12 +45,21 @@ if (!app.requestSingleInstanceLock()) {
   let win = null;
   let seitenTitel = '';
   let updateBereit = false;
+  // Hinweis im Fenstertitel in der Sprache des Spiels (Nachricht {lang}), bis dahin in der Systemsprache (2.1.1, Maethil 03.11.)
+  const UPDATE_TEXT = {
+    de: 'Update bereit (beim nächsten Start)', en: 'Update ready (on next start)', ru: 'Обновление готово (при следующем запуске)',
+    zh: '更新已就绪（下次启动时）', ja: 'アップデート準備完了（次回起動時）', ko: '업데이트 준비됨 (다음 시작 시)',
+    pl: 'Aktualizacja gotowa (przy następnym uruchomieniu)', cs: 'Aktualizace připravena (při dalším spuštění)',
+    es: 'Actualización lista (en el próximo inicio)', pt: 'Atualização pronta (no próximo arranque)',
+  };
+  let sprache = null;   // aus dem Spiel; ohne Nachricht die Systemsprache (app.getLocale erst nach whenReady verlässlich)
 
   function titelSetzen() {
     if (!win) return;
     let t = seitenTitel.replace(/\s*\(privat\)/gi, '').trim();
     if (!t || /^https?:/i.test(t)) t = 'PokéSwarm';
-    win.setTitle(t + (updateBereit ? ' · Update bereit (beim nächsten Start)' : ''));
+    const l = sprache || String(app.getLocale() || 'en').slice(0, 2).toLowerCase();
+    win.setTitle(t + (updateBereit ? ` · ${UPDATE_TEXT[l] || UPDATE_TEXT.en}` : ''));
   }
 
   function fensterOeffnen() {
@@ -127,6 +136,7 @@ if (!app.requestSingleInstanceLock()) {
     if (msg.rp && typeof msg.rp === 'object') discord.setzen(msg.rp);
     // Grafikweg aus den Spiel-Einstellungen (2.1.0): merken und die App neu starten
     if (typeof msg.gpu === 'string' && msg.gpu !== gpu.angle) gpu.setzen(msg.gpu);
+    if (typeof msg.lang === 'string' && UPDATE_TEXT[msg.lang] && msg.lang !== sprache) { sprache = msg.lang; titelSetzen(); }
   });
 
   // Auto-Update über GitHub-Releases dieses Repos; ohne Releases scheitert es still
