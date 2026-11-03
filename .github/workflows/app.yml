@@ -1,7 +1,11 @@
 # Baut die Electron-Desktop-App (app/) für Windows und Linux, legt die Ergebnisse als Workflow-Artefakte ab und
 # veröffentlicht sie als GitHub-Release v<version> (Mirco 03.11.: dann holt sich die App das Update selbst).
-# Gibt es das Release zur Version in app/package.json schon, lässt electron-builder es in Ruhe - ein neues Release
-# entsteht also nur, wenn die Version steigt. Ein neuer Lauf lädt fehlende Dateien in ein schon bestehendes Release nach.
+# Ablauf: 1. Entwurf v<version> anlegen (falls es das Release noch nicht gibt), 2. Windows und Linux laden hinein,
+# 3. erst wenn beide fertig sind, wird der Entwurf veröffentlicht - die Apps sehen nie ein halbes Release.
+# Gibt es das Release zur Version in app/package.json schon (veröffentlicht), bleibt es unberührt: ein neues Release
+# entsteht nur, wenn die Version steigt.
+# 03.11.: vorher legten die zwei Windows-Pakete (Setup + Portable) das Release gleichzeitig an, einer bekam 422 und
+# der Upload brach ab - darum legt jetzt ein eigener Schritt das Release vorher an.
 name: Desktop-App
 
 on:
@@ -11,13 +15,32 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write   # Release anlegen und Dateien hochladen
+  contents: write   # Release anlegen, Dateien hochladen, veröffentlichen
+
+env:
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  GH_REPO: ${{ github.repository }}
 
 jobs:
+  entwurf:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        run: echo "version=$(node -p "require('./app/package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Entwurf anlegen (falls es das Release noch nicht gibt)
+        run: |
+          V=${{ steps.v.outputs.version }}
+          if gh release view "v$V" >/dev/null 2>&1; then echo "Release v$V gibt es schon"; else
+            gh release create "v$V" --draft --title "$V" --notes "PokéSwarm Desktop-App $V" --target "$GITHUB_SHA"
+          fi
+
   build:
+    needs: entwurf
     strategy:
       fail-fast: false
-      max-parallel: 1   # nacheinander, damit nicht beide Läufe gleichzeitig dasselbe Release anlegen
       matrix:
         include:
           - os: windows-latest
@@ -48,13 +71,9 @@ jobs:
 
       - run: npm ci
 
-      # Ohne Zertifikat baut electron-builder unsigniert; --publish always lädt ins Release v<version> (releaseType: release)
-      # 03.11.: unter Windows brach das erste Hochladen in ein neues Release zweimal ab, ein zweiter Lauf ins dann
-      # bestehende Release klappte jedes Mal - darum hier gleich ein zweiter Versuch
-      - run: npx electron-builder ${{ matrix.ziel }} --publish always || npx electron-builder ${{ matrix.ziel }} --publish always   # npm run dist hat --publish never fest drin
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Ohne Zertifikat baut electron-builder unsigniert; --publish always lädt in den Entwurf v<version> (releaseType: draft).
+      # Ist das Release schon veröffentlicht, überspringt electron-builder das Hochladen.
+      - run: npx electron-builder ${{ matrix.ziel }} --publish always   # npm run dist hat --publish never fest drin
 
       # Platz für späteres Signieren (SignPath Foundation), nur Windows:
       # 1. unsignierte .exe mit actions/upload-artifact hochladen (Schritt-ID merken),
@@ -69,3 +88,15 @@ jobs:
           path: ${{ matrix.dateien }}
           if-no-files-found: error
           retention-days: 30
+
+  veroeffentlichen:
+    needs: [entwurf, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Entwurf veröffentlichen (erst jetzt sehen die Apps das Update)
+        run: |
+          V=${{ needs.entwurf.outputs.version }}
+          if [ "$(gh release view "v$V" --json isDraft --jq .isDraft)" = "true" ]; then
+            gh release view "v$V" --json assets --jq '.assets[].name' | grep -qx latest.yml || { echo "latest.yml fehlt - nicht veröffentlicht"; exit 1; }
+            gh release edit "v$V" --draft=false --latest
+          else echo "Release v$V ist schon veröffentlicht"; fi
