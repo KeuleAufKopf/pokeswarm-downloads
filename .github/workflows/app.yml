@@ -1,7 +1,7 @@
 # Baut die Electron-Desktop-App (app/) für Windows und Linux, legt die Ergebnisse als Workflow-Artefakte ab und
 # veröffentlicht sie als GitHub-Release v<version> (Mirco 03.11.: dann holt sich die App das Update selbst).
 # Gibt es das Release zur Version in app/package.json schon, lässt electron-builder es in Ruhe - ein neues Release
-# entsteht also nur, wenn die Version steigt.
+# entsteht also nur, wenn die Version steigt. Ein neuer Lauf lädt fehlende Dateien in ein schon bestehendes Release nach.
 name: Desktop-App
 
 on:
