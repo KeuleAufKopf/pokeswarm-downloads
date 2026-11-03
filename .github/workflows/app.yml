@@ -1,5 +1,7 @@
-# Baut die Electron-Desktop-App (app/) für Windows und Linux und legt die Ergebnisse als Workflow-Artefakte ab.
-# Es wird nichts veröffentlicht (kein Release, kein Auto-Update an Spieler).
+# Baut die Electron-Desktop-App (app/) für Windows und Linux, legt die Ergebnisse als Workflow-Artefakte ab und
+# veröffentlicht sie als GitHub-Release v<version> (Mirco 03.11.: dann holt sich die App das Update selbst).
+# Gibt es das Release zur Version in app/package.json schon, lässt electron-builder es in Ruhe - ein neues Release
+# entsteht also nur, wenn die Version steigt.
 name: Desktop-App
 
 on:
@@ -9,12 +11,13 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write   # Release anlegen und Dateien hochladen
 
 jobs:
   build:
     strategy:
       fail-fast: false
+      max-parallel: 1   # nacheinander, damit nicht beide Läufe gleichzeitig dasselbe Release anlegen
       matrix:
         include:
           - os: windows-latest
@@ -45,8 +48,10 @@ jobs:
 
       - run: npm ci
 
-      # Ohne Zertifikat baut electron-builder unsigniert; --publish never verhindert jedes Hochladen
-      - run: npm run dist -- ${{ matrix.ziel }}
+      # Ohne Zertifikat baut electron-builder unsigniert; --publish always lädt ins Release v<version> (releaseType: release)
+      - run: npx electron-builder ${{ matrix.ziel }} --publish always   # npm run dist hat --publish never fest drin
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Platz für späteres Signieren (SignPath Foundation), nur Windows:
       # 1. unsignierte .exe mit actions/upload-artifact hochladen (Schritt-ID merken),

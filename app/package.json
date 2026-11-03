@@ -36,7 +36,8 @@
       {
         "provider": "github",
         "owner": "KeuleAufKopf",
-        "repo": "pokeswarm-downloads"
+        "repo": "pokeswarm-downloads",
+        "releaseType": "release"
       }
     ],
     "win": {
