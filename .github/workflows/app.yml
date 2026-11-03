@@ -49,7 +49,10 @@ jobs:
       - run: npm ci
 
       # Ohne Zertifikat baut electron-builder unsigniert; --publish always lädt ins Release v<version> (releaseType: release)
-      - run: npx electron-builder ${{ matrix.ziel }} --publish always   # npm run dist hat --publish never fest drin
+      # 03.11.: unter Windows brach das erste Hochladen in ein neues Release zweimal ab, ein zweiter Lauf ins dann
+      # bestehende Release klappte jedes Mal - darum hier gleich ein zweiter Versuch
+      - run: npx electron-builder ${{ matrix.ziel }} --publish always || npx electron-builder ${{ matrix.ziel }} --publish always   # npm run dist hat --publish never fest drin
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
