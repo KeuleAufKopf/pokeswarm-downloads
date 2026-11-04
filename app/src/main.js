@@ -54,12 +54,13 @@ if (!app.requestSingleInstanceLock()) {
   };
   let sprache = null;   // aus dem Spiel; ohne Nachricht die Systemsprache (app.getLocale erst nach whenReady verlässlich)
 
+  const sprachcode = () => sprache || gpu.gemerkteSprache() || String(app.getLocale() || 'en').slice(0, 2).toLowerCase();
+
   function titelSetzen() {
     if (!win) return;
     let t = seitenTitel.replace(/\s*\(privat\)/gi, '').trim();
     if (!t || /^https?:/i.test(t)) t = 'PokéSwarm';
-    const l = sprache || String(app.getLocale() || 'en').slice(0, 2).toLowerCase();
-    win.setTitle(t + (updateBereit ? ` · ${UPDATE_TEXT[l] || UPDATE_TEXT.en}` : ''));
+    win.setTitle(t + (updateBereit ? ` · ${UPDATE_TEXT[sprachcode()] || UPDATE_TEXT.en}` : ''));
   }
 
   function fensterOeffnen() {
@@ -93,12 +94,13 @@ if (!app.requestSingleInstanceLock()) {
       const strg = i.control || i.meta;
       if (i.code === 'F11' && !i.isAutoRepeat) win.setFullScreen(!win.isFullScreen());
       else if (strg && !i.shift && i.code === 'KeyR') wc.reload();
+      else if (strg && i.shift && i.code === 'KeyG' && !i.isAutoRepeat) gpu.waehlen(win, sprachcode());   // Notausgang, falls man die Einstellungen nicht sieht
       else if (i.code === 'F12' && DIAG) wc.toggleDevTools();
       else return;
       e.preventDefault();
     });
 
-    wc.once('did-finish-load', () => setTimeout(() => { if (!wc.isDestroyed()) gpu.pruefen(wc); }, 5000));
+    wc.once('did-finish-load', () => setTimeout(() => { if (!wc.isDestroyed()) gpu.pruefen(wc, win, sprachcode); }, 5000));
     wc.on('did-fail-load', (_e, code, text, url, mainFrame) => {
       if (mainFrame) log(`Laden fehlgeschlagen: ${code} ${text} ${url}`);
     });
@@ -136,7 +138,7 @@ if (!app.requestSingleInstanceLock()) {
     if (msg.rp && typeof msg.rp === 'object') discord.setzen(msg.rp);
     // Grafikweg aus den Spiel-Einstellungen (2.1.0): merken und die App neu starten
     if (typeof msg.gpu === 'string' && msg.gpu !== gpu.angle) gpu.setzen(msg.gpu);
-    if (typeof msg.lang === 'string' && UPDATE_TEXT[msg.lang] && msg.lang !== sprache) { sprache = msg.lang; titelSetzen(); }
+    if (typeof msg.lang === 'string' && UPDATE_TEXT[msg.lang] && msg.lang !== sprache) { sprache = msg.lang; gpu.spracheMerken(sprache); titelSetzen(); }
   });
 
   // Auto-Update über GitHub-Releases dieses Repos; ohne Releases scheitert es still
